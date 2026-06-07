@@ -169,7 +169,7 @@ if len(stock_selection) < 2:
     st.stop()
 
 # ── Load full data (fixed wide range) ────────────────────────────────────────
-D_START, D_END = "2018-01-01", "2024-12-31"
+D_START, D_END = "2018-01-01", str(date.today())
 all_tickers = list({t for stocks in stock_selection.values() for t in stocks})
 all_tickers += ["SPY"] + [BENCHMARK_ETFS[b]["ticker"] for b in bench_selected]
 
@@ -207,7 +207,7 @@ sel_period = st.radio(
 if GLOBAL_PERIODS[sel_period] is None:
     fc1, fc2 = st.columns(2)
     d_start = fc1.date_input("מתאריך", value=date(2021, 1, 1), min_value=date(2018, 1, 1))
-    d_end   = fc2.date_input("עד תאריך", value=date(2024, 12, 31))
+    d_end   = fc2.date_input("עד תאריך", value=date.today(), max_value=date.today())
     g_start, g_end = str(d_start), str(d_end)
 else:
     g_start, g_end = GLOBAL_PERIODS[sel_period]
