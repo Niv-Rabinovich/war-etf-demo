@@ -173,17 +173,6 @@ with st.sidebar:
     lev_factor = st.select_slider("מינוף", options=[1, 2, 3], value=3)
 
     st.divider()
-
-    # ── Simulation amount ──
-    st.subheader("💰 סימולציית השקעה")
-    invest_amount = st.number_input(
-        "סכום השקעה ראשוני ($)",
-        min_value=100, max_value=10_000_000,
-        value=10_000, step=1_000,
-        format="%d",
-    )
-
-    st.divider()
     if st.button("🔄 רענן נתונים", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
@@ -444,6 +433,17 @@ with tab2:
 # TAB 3  —  INVESTMENT SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab3:
+    # ── Investment input inside the tab ──
+    st.markdown("### 💰 סימולציית השקעה — כמה היית מרוויח?")
+    col_inp, col_spacer = st.columns([1, 2])
+    invest_amount = col_inp.number_input(
+        "סכום השקעה ראשוני ($)",
+        min_value=100, max_value=10_000_000,
+        value=10_000, step=1_000,
+        format="%d",
+    )
+    st.divider()
+
     etf_r   = sec_ret.mean(axis=1)
     spy_r   = prices["SPY"].pct_change().dropna() if "SPY" in prices.columns else None
 
