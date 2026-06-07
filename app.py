@@ -325,7 +325,7 @@ with tab2:
             except Exception:
                 return ""
 
-        st.dataframe(df_table.style.applymap(color_cell), use_container_width=True)
+        st.dataframe(df_table.style.map(color_cell), use_container_width=True)
 
     # War performance bars
     st.divider()
@@ -431,7 +431,7 @@ with tab3:
 
     numeric_display = [c for c in df_display.columns if c != "סקטור"]
     st.dataframe(
-        df_display.style.applymap(color_pct, subset=numeric_display),
+        df_display.style.map(color_pct, subset=numeric_display),
         use_container_width=True,
         height=460,
     )
