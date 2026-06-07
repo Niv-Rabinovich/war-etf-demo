@@ -93,7 +93,9 @@ PERIODS_ANALYSIS = {
 
 FUND_STRUCTURE = {
     "שם הקרן": "WAR ETF 3x (WARX)",
-    "דמי ניהול (TER)": "1.25% לשנה",
+    "דמי ניהול (TER)": "1.25% לשנה (קסם)",
+    "דמי נאמן": "0.03% לשנה",
+    "סה\"כ עלות למשקיע": "1.28% לשנה",
     "מינוף": "3x — daily rebalancing via swaps",
     "בורסה מוצעת": "NYSE Arca / TASE",
     "מספר מניות": "30 מניות ב-5 סקטורים",
@@ -394,12 +396,54 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
 **Alpha מוכח** — ביצועי יתר על S&P בכל תקופות המלחמה שנבחנו
 
 **קהל יעד מחויב** — משקיע שמחפש war exposure לא יסרב ל-0.3% יותר
-
-**Revenue לקסם** — על $100M AUM:
-- 0.95% = **$950K** לשנה
-- 1.25% = **$1.25M** לשנה
-- **+$300K נוספים** בלי שינוי מהותי
         """)
+
+    st.divider()
+
+    # ── Revenue potential ──
+    st.markdown("### 💼 פוטנציאל הכנסות — קסם תעודות סל")
+
+    MGMT_FEE   = 0.0125   # 1.25%
+    TRUSTEE    = 0.0003   # 0.03%
+    aum_levels = [50, 100, 250, 500, 1_000, 2_500]
+
+    rev_rows = []
+    for aum in aum_levels:
+        aum_usd = aum * 1_000_000
+        mgmt_rev    = aum_usd * MGMT_FEE
+        trustee_rev = aum_usd * TRUSTEE
+        total_rev   = mgmt_rev + trustee_rev
+        rev_rows.append({
+            "AUM ($M)":           f"${aum:,}M",
+            "הכנסת קסם (1.25%)": f"${mgmt_rev/1e6:.3f}M",
+            "הכנסת נאמן (0.03%)":f"${trustee_rev/1000:.0f}K",
+            "סה\"כ הכנסות":       f"${total_rev/1e6:.3f}M",
+        })
+
+    df_rev = pd.DataFrame(rev_rows).set_index("AUM ($M)")
+    st.dataframe(df_rev, use_container_width=True)
+
+    # Visual bar chart
+    fig_rev = go.Figure()
+    aum_vals  = [a * 1e6 for a in aum_levels]
+    mgmt_vals = [a * MGMT_FEE / 1e6 for a in aum_vals]
+    trust_vals= [a * TRUSTEE / 1e6 for a in aum_vals]
+    labels    = [f"${a}M" for a in aum_levels]
+
+    fig_rev.add_trace(go.Bar(name="קסם — דמי ניהול 1.25%", x=labels, y=mgmt_vals,
+                             marker_color="#c00000",
+                             text=[f"${v:.2f}M" for v in mgmt_vals], textposition="inside"))
+    fig_rev.add_trace(go.Bar(name="נאמן — 0.03%", x=labels, y=trust_vals,
+                             marker_color="#1f4e79",
+                             text=[f"${v*1000:.0f}K" for v in trust_vals], textposition="inside"))
+    fig_rev.update_layout(
+        barmode="stack", height=320,
+        xaxis_title="AUM", yaxis=dict(title="הכנסה שנתית ($M)", tickprefix="$", ticksuffix="M"),
+        legend=dict(x=0.01, y=0.99),
+        margin=dict(l=20, r=20, t=10, b=20),
+    )
+    st.plotly_chart(fig_rev, use_container_width=True)
+    st.caption("💡 על AUM של $500M — קסם מרוויחה **$6.25M בשנה** מדמי ניהול בלבד. הנאמן מקבל **$150K** נוספים.")
 
     st.caption("⚠️ לצרכי מחקר ולמידה בלבד — אין לראות בכך ייעוץ השקעות. ביצועי עבר אינם ערובה לעתיד.")
 
