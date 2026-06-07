@@ -433,27 +433,41 @@ with tab2:
 # TAB 3  —  INVESTMENT SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab3:
-    # ── Investment input inside the tab ──
+    # ── Inputs ──
     st.markdown("### 💰 סימולציית השקעה — כמה היית מרוויח?")
-    col_inp, col_spacer = st.columns([1, 2])
+    col_inp, col_period, col_spacer = st.columns([1, 1, 1])
     invest_amount = col_inp.number_input(
         "סכום השקעה ראשוני ($)",
         min_value=100, max_value=10_000_000,
-        value=10_000, step=1_000,
-        format="%d",
+        value=10_000, step=1_000, format="%d",
     )
+    period_options = {
+        "כל התקופה": (str(d_start), str(d_end)),
+        "מלחמת אוקראינה (פבר׳ 2022 – דצמ׳ 2022)": ("2022-02-24", "2022-12-31"),
+        "מלחמת עזה (אוק׳ 2023 – יוני 2024)":       ("2023-10-07", "2024-06-30"),
+        "שתי המלחמות יחד":                           ("2022-02-24", "2024-06-30"),
+    }
+    chosen_period = col_period.selectbox("תקופת חישוב הכרטיסיות", list(period_options.keys()))
+    sim_start, sim_end = period_options[chosen_period]
     st.divider()
 
     etf_r   = sec_ret.mean(axis=1)
     spy_r   = prices["SPY"].pct_change().dropna() if "SPY" in prices.columns else None
 
+    # Slice to the chosen period for the cards
+    etf_r_period = etf_r.loc[sim_start:sim_end]
+    spy_r_period = spy_r.loc[sim_start:sim_end] if spy_r is not None else None
+
     etf_1x_val  = (1 + etf_r).cumprod() * invest_amount
     etf_lev_val = (1 + etf_r * lev_factor).cumprod() * invest_amount
     spy_val     = (1 + spy_r).cumprod() * invest_amount if spy_r is not None else None
 
-    final_1x  = float(etf_1x_val.iloc[-1])
-    final_lev = float(etf_lev_val.iloc[-1])
-    final_spy = float(spy_val.iloc[-1]) if spy_val is not None else None
+    def period_final(r_slice):
+        return float((1 + r_slice).prod()) * invest_amount if len(r_slice) > 0 else invest_amount
+
+    final_lev = period_final(etf_r_period * lev_factor)
+    final_1x  = period_final(etf_r_period)
+    final_spy = period_final(spy_r_period) if spy_r_period is not None else None
 
     profit_lev = final_lev - invest_amount
     profit_1x  = final_1x  - invest_amount
