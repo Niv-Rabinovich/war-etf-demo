@@ -605,30 +605,29 @@ with tab3:
         hovertemplate="%{y:.1f}%" if pct_mode else "$%{y:,.0f}",
     ))
 
-    range_buttons = [
-        dict(count=1,  label="1M",  step="month", stepmode="backward"),
-        dict(count=6,  label="6M",  step="month", stepmode="backward"),
-        dict(count=1,  label="YTD", step="year",  stepmode="todate"),
-        dict(count=1,  label="1Y",  step="year",  stepmode="backward"),
-        dict(count=3,  label="3Y",  step="year",  stepmode="backward"),
-        dict(step="all", label="ALL"),
-    ]
+    xaxis_cfg = dict(title="תאריך", range=[sim_start, sim_end], type="date")
+
+    # Range selector only in $ mode — in % mode it's misleading (% is cumulative from start)
+    if not pct_mode:
+        xaxis_cfg["rangeselector"] = dict(
+            buttons=[
+                dict(count=1,  label="1M",  step="month", stepmode="backward"),
+                dict(count=6,  label="6M",  step="month", stepmode="backward"),
+                dict(count=1,  label="YTD", step="year",  stepmode="todate"),
+                dict(count=1,  label="1Y",  step="year",  stepmode="backward"),
+                dict(count=3,  label="3Y",  step="year",  stepmode="backward"),
+                dict(step="all", label="ALL"),
+            ],
+            bgcolor="#2a2a2a", activecolor="#c00000",
+            bordercolor="#555", borderwidth=1,
+            font=dict(color="white", size=11),
+        )
 
     fig_sim.update_layout(
         height=460, hovermode="x unified",
-        xaxis=dict(
-            title="תאריך",
-            range=[sim_start, sim_end],
-            rangeselector=dict(
-                buttons=range_buttons,
-                bgcolor="#2a2a2a", activecolor="#c00000",
-                bordercolor="#555", borderwidth=1,
-                font=dict(color="white", size=11),
-            ),
-            type="date",
-        ),
+        xaxis=xaxis_cfg,
         yaxis=dict(
-            title="תשואה (%)" if pct_mode else "שווי תיק ($)",
+            title=f"תשואה מצטברת מ-{sim_start} (%)" if pct_mode else "שווי תיק ($)",
             ticksuffix="%" if pct_mode else "",
             tickprefix="" if pct_mode else "$",
             tickformat=".1f" if pct_mode else ",.0f",
@@ -636,6 +635,10 @@ with tab3:
         legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)"),
         margin=dict(l=20, r=20, t=10, b=30),
     )
+
+    if pct_mode:
+        st.caption(f"ℹ️ במצב % — הגרף מראה תשואה מצטברת מ-**{sim_start}**. לזום לתת-תקופה השתמש בבחירת התקופה למעלה.")
+
     st.plotly_chart(fig_sim, use_container_width=True)
 
     # ── War period breakdown ──
