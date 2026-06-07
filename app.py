@@ -435,7 +435,7 @@ with tab2:
 with tab3:
     # ── Inputs ──
     st.markdown("### 💰 סימולציית השקעה — כמה היית מרוויח?")
-    col_inp, col_period, col_spacer = st.columns([1, 1, 1])
+    col_inp, col_period, col_view = st.columns([1, 1, 1])
     invest_amount = col_inp.number_input(
         "סכום השקעה ראשוני ($)",
         min_value=100, max_value=10_000_000,
@@ -447,8 +447,9 @@ with tab3:
         "מלחמת עזה (אוק׳ 2023 – יוני 2024)":       ("2023-10-07", "2024-06-30"),
         "שתי המלחמות יחד":                           ("2022-02-24", "2024-06-30"),
     }
-    chosen_period = col_period.selectbox("תקופת חישוב הכרטיסיות", list(period_options.keys()))
+    chosen_period = col_period.selectbox("תקופת חישוב", list(period_options.keys()))
     sim_start, sim_end = period_options[chosen_period]
+    chart_mode = col_view.radio("תצוגת גרף", ["$ שווי", "% תשואה"], horizontal=True)
     st.divider()
 
     etf_r   = sec_ret.mean(axis=1)
@@ -517,77 +518,109 @@ with tab3:
     """, unsafe_allow_html=True)
 
     # ── Chart ──
+    pct_mode = chart_mode == "% תשואה"
+
+    # Slice all series to the chosen period
+    etf_r_slice = etf_r.loc[sim_start:sim_end]
+    spy_r_slice = spy_r.loc[sim_start:sim_end] if spy_r is not None else None
+
+    def make_series(r_slice, multiplier=1):
+        r = r_slice * multiplier
+        if pct_mode:
+            return ((1 + r).cumprod() - 1) * 100
+        else:
+            return (1 + r).cumprod() * invest_amount
+
     fig_sim = go.Figure()
 
+    # War period shading (only if inside the chosen range)
     for war_name, wp in WAR_PERIODS.items():
-        fig_sim.add_vrect(
-            x0=wp["start"], x1=wp["end"],
-            fillcolor=wp["fill"],
-            line=dict(color=wp["line"], width=1, dash="dot"),
-            layer="below",
-            annotation_text=war_name,
-            annotation_position="top left",
-            annotation_font_size=11,
-        )
+        if wp["start"] <= sim_end and wp["end"] >= sim_start:
+            fig_sim.add_vrect(
+                x0=max(wp["start"], sim_start), x1=min(wp["end"], sim_end),
+                fillcolor=wp["fill"],
+                line=dict(color=wp["line"], width=1, dash="dot"),
+                layer="below",
+                annotation_text=war_name,
+                annotation_position="top left",
+                annotation_font_size=11,
+            )
 
+    # Zero / baseline line
     fig_sim.add_hline(
-        y=invest_amount, line_dash="dot", line_color="#999", line_width=1.2,
-        annotation_text=f"  השקעה ראשונית ${invest_amount:,.0f}",
+        y=0 if pct_mode else invest_amount,
+        line_dash="dot", line_color="#999", line_width=1.2,
+        annotation_text="  0%" if pct_mode else f"  ${invest_amount:,.0f}",
         annotation_position="right", annotation_font_size=10,
     )
 
-    if spy_val is not None:
+    if spy_r_slice is not None:
+        s = make_series(spy_r_slice)
         fig_sim.add_trace(go.Scatter(
-            x=spy_val.index, y=spy_val.values,
+            x=s.index, y=s.values,
             name="S&P 500", line=dict(color="#888", width=1.8, dash="dash"),
+            hovertemplate="%{y:.1f}%" if pct_mode else "$%{y:,.0f}",
         ))
 
     for bname in bench_selected:
         bticker = BENCHMARK_ETFS[bname]["ticker"]
         if bticker in prices.columns:
-            b_r2 = prices[bticker].pct_change().dropna()
-            b_val = (1 + b_r2).cumprod() * invest_amount
+            b_slice = prices[bticker].pct_change().dropna().loc[sim_start:sim_end]
+            s = make_series(b_slice)
             fig_sim.add_trace(go.Scatter(
-                x=b_val.index, y=b_val.values,
+                x=s.index, y=s.values,
                 name=bname.split("(")[1].rstrip(")"),
                 line=dict(color=BENCHMARK_ETFS[bname]["color"], width=2,
                           dash=BENCHMARK_ETFS[bname]["dash"]),
+                hovertemplate="%{y:.1f}%" if pct_mode else "$%{y:,.0f}",
             ))
 
     if lev_factor > 1:
+        s = make_series(etf_r_slice)
         fig_sim.add_trace(go.Scatter(
-            x=etf_1x_val.index, y=etf_1x_val.values,
+            x=s.index, y=s.values,
             name="War ETF 1x",
             line=dict(color="#1f4e79", width=2, dash="dot"),
+            hovertemplate="%{y:.1f}%" if pct_mode else "$%{y:,.0f}",
         ))
 
+    s_lev = make_series(etf_r_slice, lev_factor)
     fig_sim.add_trace(go.Scatter(
-        x=etf_lev_val.index, y=etf_lev_val.values,
+        x=s_lev.index, y=s_lev.values,
         name=f"War ETF {lev_factor}x ⭐",
         line=dict(color="#c00000", width=3.5),
         fill="tozeroy", fillcolor="rgba(192,0,0,0.06)",
+        hovertemplate="%{y:.1f}%" if pct_mode else "$%{y:,.0f}",
     ))
+
+    range_buttons = [
+        dict(count=1,  label="1M",  step="month", stepmode="backward"),
+        dict(count=6,  label="6M",  step="month", stepmode="backward"),
+        dict(count=1,  label="YTD", step="year",  stepmode="todate"),
+        dict(count=1,  label="1Y",  step="year",  stepmode="backward"),
+        dict(count=3,  label="3Y",  step="year",  stepmode="backward"),
+        dict(step="all", label="ALL"),
+    ]
 
     fig_sim.update_layout(
         height=460, hovermode="x unified",
         xaxis=dict(
             title="תאריך",
+            range=[sim_start, sim_end],
             rangeselector=dict(
-                buttons=[
-                    dict(count=1,  label="1M",  step="month", stepmode="backward"),
-                    dict(count=6,  label="6M",  step="month", stepmode="backward"),
-                    dict(count=1,  label="YTD", step="year",  stepmode="todate"),
-                    dict(count=1,  label="1Y",  step="year",  stepmode="backward"),
-                    dict(count=3,  label="3Y",  step="year",  stepmode="backward"),
-                    dict(step="all", label="ALL"),
-                ],
+                buttons=range_buttons,
                 bgcolor="#2a2a2a", activecolor="#c00000",
                 bordercolor="#555", borderwidth=1,
                 font=dict(color="white", size=11),
             ),
             type="date",
         ),
-        yaxis=dict(title="שווי תיק ($)", tickprefix="$", tickformat=",.0f"),
+        yaxis=dict(
+            title="תשואה (%)" if pct_mode else "שווי תיק ($)",
+            ticksuffix="%" if pct_mode else "",
+            tickprefix="" if pct_mode else "$",
+            tickformat=".1f" if pct_mode else ",.0f",
+        ),
         legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)"),
         margin=dict(l=20, r=20, t=10, b=30),
     )
