@@ -8,7 +8,6 @@ from datetime import date
 import warnings
 warnings.filterwarnings("ignore")
 
-# ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="WAR ETF 3x | קסם תעודות סל",
     page_icon="🛡️",
@@ -24,7 +23,7 @@ st.markdown("""
         border-radius: 6px;
         margin-bottom: 8px;
         background: #fafafa;
-        height: 175px;
+        min-height: 160px;
     }
     .war-banner {
         background: linear-gradient(135deg,#0f3460,#16213e,#1a1a2e);
@@ -33,6 +32,13 @@ st.markdown("""
         border-radius: 12px;
         margin-bottom: 24px;
         text-align: center;
+    }
+    .sim-box {
+        background: linear-gradient(135deg,#1a3a1a,#0d260d);
+        color: white;
+        padding: 20px 28px;
+        border-radius: 10px;
+        margin: 12px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -71,26 +77,28 @@ SECTORS = {
     },
 }
 
+BENCHMARK_ETFS = {
+    "ITA (iShares Defense ETF)": {"ticker": "ITA", "color": "#2196F3", "dash": "dash"},
+    "XAR (SPDR Aerospace ETF)":  {"ticker": "XAR", "color": "#FF9800", "dash": "dot"},
+    "PPA (Invesco Defense ETF)": {"ticker": "PPA", "color": "#9C27B0", "dash": "dashdot"},
+}
+
 WAR_PERIODS = {
     "פלישת רוסיה לאוקראינה": {
-        "start": "2022-02-24",
-        "end": "2022-12-31",
-        "fill": "rgba(220,50,50,0.12)",
-        "line": "rgba(220,50,50,0.6)",
+        "start": "2022-02-24", "end": "2022-12-31",
+        "fill": "rgba(220,50,50,0.12)", "line": "rgba(220,50,50,0.6)",
     },
     "מלחמת עזה": {
-        "start": "2023-10-07",
-        "end": "2024-06-30",
-        "fill": "rgba(255,140,0,0.12)",
-        "line": "rgba(255,140,0,0.6)",
+        "start": "2023-10-07", "end": "2024-06-30",
+        "fill": "rgba(255,140,0,0.12)", "line": "rgba(255,140,0,0.6)",
     },
 }
 
 PERIODS_ANALYSIS = {
-    "לפני המלחמות (2021)": ("2021-01-01", "2022-02-23"),
-    "מלחמת אוקראינה (2022)": ("2022-02-24", "2022-12-31"),
-    "בין המלחמות (2023 H1)": ("2023-01-01", "2023-10-06"),
-    "מלחמת עזה (2023-24)": ("2023-10-07", "2024-06-30"),
+    "לפני המלחמות (2021)":      ("2021-01-01", "2022-02-23"),
+    "מלחמת אוקראינה (2022)":    ("2022-02-24", "2022-12-31"),
+    "בין המלחמות (2023 H1)":    ("2023-01-01", "2023-10-06"),
+    "מלחמת עזה (2023-24)":      ("2023-10-07", "2024-06-30"),
 }
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
@@ -98,15 +106,17 @@ PERIODS_ANALYSIS = {
 def load_prices(tickers: list[str], start: str, end: str) -> pd.DataFrame:
     raw = yf.download(tickers, start=start, end=end, auto_adjust=True, progress=False)
     close = raw["Close"] if isinstance(raw.columns, pd.MultiIndex) else raw
+    if isinstance(close, pd.Series):
+        close = close.to_frame()
     return close.dropna(thresh=int(len(close) * 0.5), axis=1)
 
 
-def sector_returns(prices: pd.DataFrame, sectors: list[str]) -> pd.DataFrame:
+def sector_returns(prices: pd.DataFrame, stock_selection: dict[str, list[str]]) -> pd.DataFrame:
     out = {}
-    for s in sectors:
-        cols = [t for t in SECTORS[s]["stocks"] if t in prices.columns]
+    for sname, stocks in stock_selection.items():
+        cols = [t for t in stocks if t in prices.columns]
         if cols:
-            out[SECTORS[s]["he"]] = prices[cols].pct_change().mean(axis=1)
+            out[SECTORS[sname]["he"]] = prices[cols].pct_change().mean(axis=1)
     return pd.DataFrame(out).dropna()
 
 
@@ -114,39 +124,81 @@ def lev_nav(rets: pd.Series, lev: int) -> pd.Series:
     return (1 + rets * lev).cumprod() * 100
 
 
-def period_return(series: pd.Series, start: str, end: str) -> float | None:
+def period_return(series: pd.Series, start: str, end: str):
     s = series.loc[start:end]
     return float((1 + s).prod() - 1) if len(s) > 5 else None
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("⚙️ הגדרות")
-    st.subheader("סקטורים לתעודה")
-    selected = [s for s in SECTORS if st.checkbox(s, value=True, key=s)]
+
+    # ── Sector + stock selection ──
+    st.subheader("סקטורים ומניות")
+    stock_selection: dict[str, list[str]] = {}
+
+    for sname, sinfo in SECTORS.items():
+        col_check, col_label = st.columns([1, 7])
+        sector_on = col_check.checkbox("", value=True, key=f"chk_{sname}", label_visibility="collapsed")
+        col_label.markdown(f"**{sname}**")
+        if sector_on:
+            chosen = st.multiselect(
+                f"מניות — {sinfo['he']}",
+                options=sinfo["stocks"],
+                default=sinfo["stocks"],
+                key=f"stocks_{sname}",
+                label_visibility="collapsed",
+            )
+            if chosen:
+                stock_selection[sname] = chosen
 
     st.divider()
+
+    # ── Benchmark ETFs ──
+    st.subheader("השוואה לתעודות קיימות")
+    bench_selected = [
+        name for name, info in BENCHMARK_ETFS.items()
+        if st.checkbox(name, value=True, key=f"bench_{name}")
+    ]
+
+    st.divider()
+
+    # ── Date range ──
     st.subheader("תקופת בק-טסטינג")
     d_start = st.date_input("מתאריך", value=date(2021, 1, 1), min_value=date(2018, 1, 1))
     d_end   = st.date_input("עד תאריך", value=date(2024, 12, 31))
 
     st.divider()
+
+    # ── Leverage ──
     lev_factor = st.select_slider("מינוף", options=[1, 2, 3], value=3)
+
+    st.divider()
+
+    # ── Simulation amount ──
+    st.subheader("💰 סימולציית השקעה")
+    invest_amount = st.number_input(
+        "סכום השקעה ראשוני ($)",
+        min_value=100, max_value=10_000_000,
+        value=10_000, step=1_000,
+        format="%d",
+    )
 
     st.divider()
     if st.button("🔄 רענן נתונים", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
-if len(selected) < 2:
-    st.warning("⚠️ בחר לפחות 2 סקטורים כדי לחשב קורלציה.")
+if len(stock_selection) < 2:
+    st.warning("⚠️ בחר לפחות 2 סקטורים עם מניות כדי לחשב קורלציה.")
     st.stop()
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-all_tickers = list({t for s in selected for t in SECTORS[s]["stocks"]}) + ["SPY"]
+all_tickers = list({t for stocks in stock_selection.values() for t in stocks})
+all_tickers += ["SPY"] + [BENCHMARK_ETFS[b]["ticker"] for b in bench_selected]
 
 with st.spinner("📡 טוען נתוני שוק..."):
     prices = load_prices(all_tickers, str(d_start), str(d_end))
-    sec_ret = sector_returns(prices, selected)
+    sec_ret = sector_returns(prices, stock_selection)
 
 # ── Banner ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -157,7 +209,12 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["📊 סקטורים וקורלציה", "📈 בק-טסטינג", "🔍 מניות בודדות"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 סקטורים וקורלציה",
+    "📈 בק-טסטינג",
+    "💰 סימולציית השקעה",
+    "🔍 מניות בודדות",
+])
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 1  —  SECTORS & CORRELATION
@@ -165,10 +222,10 @@ tab1, tab2, tab3 = st.tabs(["📊 סקטורים וקורלציה", "📈 בק-�
 with tab1:
     st.subheader("הסקטורים שנבחרו לתעודה")
 
-    cols = st.columns(len(selected))
-    for i, sname in enumerate(selected):
+    cols = st.columns(len(stock_selection))
+    for i, (sname, stocks) in enumerate(stock_selection.items()):
         info = SECTORS[sname]
-        stocks_ok = [t for t in info["stocks"] if t in prices.columns]
+        stocks_ok = [t for t in stocks if t in prices.columns]
         total_ret = None
         if stocks_ok:
             r = prices[stocks_ok]
@@ -181,44 +238,35 @@ with tab1:
         <div class="sector-card" style="border-color:{info['color']}; background:{info['color']}0d">
             <b style="color:{info['color']};font-size:15px">{info['he']}</b><br>
             <small style="color:#555">{', '.join(stocks_ok)}</small><br><br>
-            <span style="font-size:12px;color:#444">{info['desc']}</span><br><br>
             <span style="font-size:18px;font-weight:700;color:{ret_color}">{ret_str}</span>
             <span style="font-size:11px;color:#888"> מתחילת התקופה</span>
         </div>
         """, unsafe_allow_html=True)
 
     st.divider()
-
-    # Correlation heatmap
     st.subheader("מטריצת קורלציה בין הסקטורים")
 
     corr = sec_ret.corr()
     fig_corr = px.imshow(
-        corr,
-        text_auto=".2f",
+        corr, text_auto=".2f",
         color_continuous_scale="RdYlGn_r",
-        zmin=-1, zmax=1,
-        aspect="auto",
+        zmin=-1, zmax=1, aspect="auto",
     )
     fig_corr.update_traces(textfont_size=15, textfont_color="white")
     fig_corr.update_layout(
-        height=420,
-        margin=dict(l=20, r=20, t=30, b=20),
+        height=420, margin=dict(l=20, r=20, t=30, b=20),
         coloraxis_colorbar_title="קורלציה",
-        xaxis_title="",
-        yaxis_title="",
+        xaxis_title="", yaxis_title="",
     )
     st.plotly_chart(fig_corr, use_container_width=True)
 
-    # Summary metrics below the matrix
     upper = corr.values[np.triu_indices_from(corr.values, k=1)]
     avg_c = float(upper.mean())
     min_idx = np.unravel_index(np.argmin(corr.values + np.eye(len(corr)) * 99), corr.shape)
     max_idx = np.unravel_index(np.argmax(corr.values - np.eye(len(corr)) * 99), corr.shape)
 
     m1, m2, m3 = st.columns(3)
-    m1.metric("קורלציה ממוצעת", f"{avg_c:.2f}",
-              help="ערך נמוך = גיוון טוב יותר בתעודה")
+    m1.metric("קורלציה ממוצעת", f"{avg_c:.2f}", help="ערך נמוך = גיוון טוב יותר")
     m2.metric("הצמד הכי פחות מתואם",
               f"{corr.index[min_idx[0]].split()[0]} × {corr.columns[min_idx[1]].split()[0]}",
               f"{corr.values[min_idx]:.2f}")
@@ -226,25 +274,23 @@ with tab1:
               f"{corr.index[max_idx[0]].split()[0]} × {corr.columns[max_idx[1]].split()[0]}",
               f"{corr.values[max_idx]:.2f}")
 
-    # Explanation box
     if avg_c < 0.6:
-        st.success(f"✅ קורלציה ממוצעת של {avg_c:.2f} — הסקטורים מגוונים מספיק. זה טוב לתעודת הסל.")
+        st.success(f"✅ קורלציה ממוצעת {avg_c:.2f} — הסקטורים מגוונים מספיק.")
     elif avg_c < 0.8:
-        st.warning(f"⚠️ קורלציה ממוצעת של {avg_c:.2f} — גיוון בינוני. שקול להחליף סקטור.")
+        st.warning(f"⚠️ קורלציה ממוצעת {avg_c:.2f} — גיוון בינוני. שקול להחליף סקטור.")
     else:
-        st.error(f"❌ קורלציה ממוצעת של {avg_c:.2f} — הסקטורים נעים יחד מדי. שנה את הבחירה.")
+        st.error(f"❌ קורלציה ממוצעת {avg_c:.2f} — הסקטורים נעים יחד מדי.")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 2  —  BACKTESTING
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab2:
-    st.subheader(f"War ETF {lev_factor}x vs S&P 500 — ביצועים היסטוריים")
+    st.subheader(f"War ETF {lev_factor}x — ביצועים היסטוריים והשוואה לתעודות קיימות")
 
     etf_r = sec_ret.mean(axis=1)
     spy_r = prices["SPY"].pct_change().dropna() if "SPY" in prices.columns else None
 
-    # Build performance chart
     fig_bt = go.Figure()
 
     for war_name, wp in WAR_PERIODS.items():
@@ -260,34 +306,42 @@ with tab2:
 
     if spy_r is not None:
         fig_bt.add_trace(go.Scatter(
-            x=lev_nav(spy_r, 1).index,
-            y=lev_nav(spy_r, 1).values,
-            name="S&P 500",
-            line=dict(color="#888", width=1.8, dash="dash"),
+            x=lev_nav(spy_r, 1).index, y=lev_nav(spy_r, 1).values,
+            name="S&P 500", line=dict(color="#888", width=1.8, dash="dash"),
         ))
+
+    # Benchmark ETFs
+    for bname in bench_selected:
+        bticker = BENCHMARK_ETFS[bname]["ticker"]
+        if bticker in prices.columns:
+            b_r = prices[bticker].pct_change().dropna()
+            fig_bt.add_trace(go.Scatter(
+                x=lev_nav(b_r, 1).index, y=lev_nav(b_r, 1).values,
+                name=bname.split("(")[1].rstrip(")"),
+                line=dict(
+                    color=BENCHMARK_ETFS[bname]["color"],
+                    width=2,
+                    dash=BENCHMARK_ETFS[bname]["dash"],
+                ),
+            ))
 
     if lev_factor > 1:
         fig_bt.add_trace(go.Scatter(
-            x=lev_nav(etf_r, 1).index,
-            y=lev_nav(etf_r, 1).values,
+            x=lev_nav(etf_r, 1).index, y=lev_nav(etf_r, 1).values,
             name="War ETF 1x",
             line=dict(color="#1f4e79", width=2, dash="dot"),
         ))
 
     fig_bt.add_trace(go.Scatter(
-        x=lev_nav(etf_r, lev_factor).index,
-        y=lev_nav(etf_r, lev_factor).values,
+        x=lev_nav(etf_r, lev_factor).index, y=lev_nav(etf_r, lev_factor).values,
         name=f"War ETF {lev_factor}x ⭐",
         line=dict(color="#c00000", width=3.5),
-        fill="tozeroy",
-        fillcolor="rgba(192,0,0,0.06)",
+        fill="tozeroy", fillcolor="rgba(192,0,0,0.06)",
     ))
 
     fig_bt.update_layout(
-        height=480,
-        hovermode="x unified",
-        xaxis_title="תאריך",
-        yaxis_title="שווי תיק (בסיס 100)",
+        height=500, hovermode="x unified",
+        xaxis_title="תאריך", yaxis_title="שווי תיק (בסיס 100)",
         legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)"),
         margin=dict(l=20, r=20, t=20, b=30),
     )
@@ -295,23 +349,30 @@ with tab2:
 
     st.divider()
 
-    # Period comparison table
+    # Period table — now includes benchmark ETFs
     st.subheader("השוואת תשואות לפי תקופה")
 
     rows = []
     for pname, (ps, pe) in PERIODS_ANALYSIS.items():
-        r_etf   = period_return(etf_r, ps, pe)
-        r_lev   = period_return(etf_r * lev_factor, ps, pe) if lev_factor > 1 else None
-        r_spy   = period_return(spy_r, ps, pe) if spy_r is not None else None
+        r_etf = period_return(etf_r, ps, pe)
         if r_etf is None:
             continue
-        rows.append({
+        r_lev = period_return(etf_r * lev_factor, ps, pe) if lev_factor > 1 else None
+        r_spy = period_return(spy_r, ps, pe) if spy_r is not None else None
+        row = {
             "תקופה": pname,
             f"War ETF {lev_factor}x": f"{r_lev*100:+.1f}%" if r_lev else "—",
             "War ETF 1x": f"{r_etf*100:+.1f}%",
-            "S&P 500": f"{r_spy*100:+.1f}%" if r_spy is not None else "—",
-            "עודף vs S&P (ETF 1x)": f"{(r_etf-(r_spy or 0))*100:+.1f}%" if r_spy is not None else "—",
-        })
+            "S&P 500": f"{r_spy*100:+.1f}%" if r_spy else "—",
+        }
+        for bname in bench_selected:
+            bticker = BENCHMARK_ETFS[bname]["ticker"]
+            if bticker in prices.columns:
+                b_r2 = prices[bticker].pct_change().dropna()
+                r_b = period_return(b_r2, ps, pe)
+                short = bname.split("(")[1].rstrip(")")
+                row[short] = f"{r_b*100:+.1f}%" if r_b else "—"
+        rows.append(row)
 
     if rows:
         df_table = pd.DataFrame(rows).set_index("תקופה")
@@ -321,66 +382,195 @@ with tab2:
                 return ""
             try:
                 num = float(val.replace("%", "").replace("+", ""))
-                return f"color: {'#27ae60' if num > 0 else '#c0392b'}; font-weight: bold"
+                return f"color: {'#27ae60' if num > 0 else '#c0392b'}; font-weight:bold"
             except Exception:
                 return ""
 
         st.dataframe(df_table.style.map(color_cell), use_container_width=True)
 
-    # War performance bars
+    # War bars
     st.divider()
     st.subheader("ביצועי סקטורים בתקופות מלחמה")
-
     war_col1, war_col2 = st.columns(2)
     for col_w, (war_name, wp) in zip([war_col1, war_col2], WAR_PERIODS.items()):
         sector_perfs = {}
-        for sname in selected:
-            info = SECTORS[sname]
-            stocks_ok = [t for t in info["stocks"] if t in prices.columns]
+        for sname, stocks in stock_selection.items():
+            stocks_ok = [t for t in stocks if t in prices.columns]
             if not stocks_ok:
                 continue
             period_p = prices[stocks_ok].loc[wp["start"]:wp["end"]]
             if len(period_p) < 5:
                 continue
             perf = float((period_p.iloc[-1] / period_p.iloc[0] - 1).mean() * 100)
-            sector_perfs[info["he"]] = perf
+            sector_perfs[SECTORS[sname]["he"]] = perf
 
         if not sector_perfs:
-            col_w.info(f"{war_name} — אין נתונים מספיקים")
+            col_w.info(f"{war_name} — אין נתונים")
             continue
 
         fig_bar = go.Figure(go.Bar(
-            x=list(sector_perfs.values()),
-            y=list(sector_perfs.keys()),
+            x=list(sector_perfs.values()), y=list(sector_perfs.keys()),
             orientation="h",
             marker_color=["#27ae60" if v > 0 else "#e74c3c" for v in sector_perfs.values()],
             text=[f"{v:+.1f}%" for v in sector_perfs.values()],
             textposition="outside",
         ))
         fig_bar.update_layout(
-            title=war_name,
-            height=280,
+            title=war_name, height=280,
             margin=dict(l=10, r=60, t=40, b=20),
-            xaxis_title="תשואה (%)",
-            xaxis_zeroline=True,
-            xaxis_zerolinecolor="#333",
-            showlegend=False,
+            xaxis_title="תשואה (%)", showlegend=False,
         )
         col_w.plotly_chart(fig_bar, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TAB 3  —  INDIVIDUAL STOCKS
+# TAB 3  —  INVESTMENT SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab3:
+    st.subheader(f"סימולציית השקעה — ${invest_amount:,.0f}")
+
+    etf_r = sec_ret.mean(axis=1)
+    spy_r = prices["SPY"].pct_change().dropna() if "SPY" in prices.columns else None
+
+    etf_1x_val  = (1 + etf_r).cumprod() * invest_amount
+    etf_lev_val = (1 + etf_r * lev_factor).cumprod() * invest_amount
+    spy_val     = (1 + spy_r).cumprod() * invest_amount if spy_r is not None else None
+
+    # Big metrics
+    final_1x  = float(etf_1x_val.iloc[-1])
+    final_lev = float(etf_lev_val.iloc[-1])
+    final_spy = float(spy_val.iloc[-1]) if spy_val is not None else None
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric(
+        f"War ETF {lev_factor}x — שווי סופי",
+        f"${final_lev:,.0f}",
+        f"{'+' if final_lev > invest_amount else ''}{final_lev - invest_amount:,.0f}$ ({(final_lev/invest_amount-1)*100:+.1f}%)",
+    )
+    m2.metric(
+        "War ETF 1x — שווי סופי",
+        f"${final_1x:,.0f}",
+        f"{'+' if final_1x > invest_amount else ''}{final_1x - invest_amount:,.0f}$ ({(final_1x/invest_amount-1)*100:+.1f}%)",
+    )
+    if final_spy:
+        m3.metric(
+            "S&P 500 — שווי סופי",
+            f"${final_spy:,.0f}",
+            f"{'+' if final_spy > invest_amount else ''}{final_spy - invest_amount:,.0f}$ ({(final_spy/invest_amount-1)*100:+.1f}%)",
+        )
+
+    # Chart in $ terms
+    fig_sim = go.Figure()
+
+    for war_name, wp in WAR_PERIODS.items():
+        fig_sim.add_vrect(
+            x0=wp["start"], x1=wp["end"],
+            fillcolor=wp["fill"],
+            line=dict(color=wp["line"], width=1, dash="dot"),
+            layer="below",
+            annotation_text=war_name,
+            annotation_position="top left",
+            annotation_font_size=11,
+        )
+
+    # Starting line
+    fig_sim.add_hline(
+        y=invest_amount, line_dash="dot",
+        line_color="#aaa", line_width=1,
+        annotation_text=f"השקעה ראשונית ${invest_amount:,.0f}",
+        annotation_position="right",
+    )
+
+    if spy_val is not None:
+        fig_sim.add_trace(go.Scatter(
+            x=spy_val.index, y=spy_val.values,
+            name="S&P 500", line=dict(color="#888", width=1.8, dash="dash"),
+        ))
+
+    # Benchmark ETFs
+    for bname in bench_selected:
+        bticker = BENCHMARK_ETFS[bname]["ticker"]
+        if bticker in prices.columns:
+            b_r = prices[bticker].pct_change().dropna()
+            b_val = (1 + b_r).cumprod() * invest_amount
+            fig_sim.add_trace(go.Scatter(
+                x=b_val.index, y=b_val.values,
+                name=bname.split("(")[1].rstrip(")"),
+                line=dict(
+                    color=BENCHMARK_ETFS[bname]["color"],
+                    width=2, dash=BENCHMARK_ETFS[bname]["dash"],
+                ),
+            ))
+
+    if lev_factor > 1:
+        fig_sim.add_trace(go.Scatter(
+            x=etf_1x_val.index, y=etf_1x_val.values,
+            name="War ETF 1x",
+            line=dict(color="#1f4e79", width=2, dash="dot"),
+        ))
+
+    fig_sim.add_trace(go.Scatter(
+        x=etf_lev_val.index, y=etf_lev_val.values,
+        name=f"War ETF {lev_factor}x ⭐",
+        line=dict(color="#c00000", width=3.5),
+        fill="tozeroy", fillcolor="rgba(192,0,0,0.05)",
+    ))
+
+    fig_sim.update_layout(
+        height=480, hovermode="x unified",
+        xaxis_title="תאריך",
+        yaxis_title="שווי תיק ($)",
+        yaxis_tickprefix="$", yaxis_tickformat=",.0f",
+        legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)"),
+        margin=dict(l=20, r=20, t=20, b=30),
+    )
+    st.plotly_chart(fig_sim, use_container_width=True)
+
+    # Summary table by war period
+    st.divider()
+    st.subheader("כמה היית מרוויח בכל תקופת מלחמה?")
+
+    sim_rows = []
+    for pname, (ps, pe) in PERIODS_ANALYSIS.items():
+        r_etf = period_return(etf_r, ps, pe)
+        if r_etf is None:
+            continue
+        r_lev = (1 + etf_r.loc[ps:pe] * lev_factor).prod() - 1
+        r_spy2 = period_return(spy_r, ps, pe) if spy_r is not None else None
+        sim_rows.append({
+            "תקופה": pname,
+            f"War ETF {lev_factor}x — רווח/הפסד": f"{'+'  if r_lev > 0 else ''}${r_lev*invest_amount:,.0f}",
+            "War ETF 1x — רווח/הפסד": f"{'+'  if r_etf > 0 else ''}${r_etf*invest_amount:,.0f}",
+            "S&P 500 — רווח/הפסד": f"{'+'  if (r_spy2 or 0) > 0 else ''}${(r_spy2 or 0)*invest_amount:,.0f}" if r_spy2 else "—",
+        })
+
+    if sim_rows:
+        df_sim = pd.DataFrame(sim_rows).set_index("תקופה")
+
+        def color_money(val):
+            if not isinstance(val, str) or val == "—":
+                return ""
+            try:
+                num = float(val.replace("$", "").replace(",", "").replace("+", ""))
+                return f"color: {'#27ae60' if num > 0 else '#c0392b'}; font-weight:bold"
+            except Exception:
+                return ""
+
+        st.dataframe(df_sim.style.map(color_money), use_container_width=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 4  —  INDIVIDUAL STOCKS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab4:
     st.subheader("ביצועי מניות בודדות לפי תקופות (%)")
 
     stock_rows: dict[str, dict] = {}
     sector_label: dict[str, str] = {}
 
-    for sname in selected:
+    for sname, stocks in stock_selection.items():
         info = SECTORS[sname]
-        for ticker in info["stocks"]:
+        for ticker in stocks:
             if ticker not in prices.columns:
                 continue
             sector_label[ticker] = info["he"]
@@ -389,38 +579,32 @@ with tab3:
                 s = prices[ticker].loc[ps:pe]
                 row[pname] = round(float((s.iloc[-1] / s.iloc[0] - 1) * 100), 1) if len(s) > 5 else np.nan
             row["ממוצע בתקופות מלחמה"] = round(
-                np.nanmean([row.get("מלחמת אוקראינה (2022)", np.nan),
-                            row.get("מלחמת עזה (2023-24)", np.nan)]), 1)
+                np.nanmean([
+                    row.get("מלחמת אוקראינה (2022)", np.nan),
+                    row.get("מלחמת עזה (2023-24)", np.nan),
+                ]), 1)
             stock_rows[ticker] = row
 
     df_stocks = pd.DataFrame(stock_rows).T
     df_stocks.index.name = "מניה"
 
-    # Heatmap of numeric columns
     numeric_cols = [c for c in df_stocks.columns if c != "סקטור"]
     heat_data = df_stocks[numeric_cols].apply(pd.to_numeric, errors="coerce")
-
     vmax = min(float(heat_data.abs().max().max()), 200)
 
     fig_heat = px.imshow(
-        heat_data.T,
-        text_auto=".0f",
+        heat_data.T, text_auto=".0f",
         color_continuous_scale="RdYlGn",
-        zmin=-vmax, zmax=vmax,
-        aspect="auto",
+        zmin=-vmax, zmax=vmax, aspect="auto",
     )
     fig_heat.update_layout(
-        height=340,
-        margin=dict(l=20, r=20, t=20, b=20),
-        xaxis_title="מניה",
-        yaxis_title="תקופה",
+        height=340, margin=dict(l=20, r=20, t=20, b=20),
+        xaxis_title="מניה", yaxis_title="תקופה",
         coloraxis_colorbar_title="%",
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
     st.divider()
-
-    # Sortable table
     st.subheader("טבלת מניות מלאה")
     df_display = df_stocks.sort_values("ממוצע בתקופות מלחמה", ascending=False)
 
@@ -432,13 +616,10 @@ with tab3:
     numeric_display = [c for c in df_display.columns if c != "סקטור"]
     st.dataframe(
         df_display.style.map(color_pct, subset=numeric_display),
-        use_container_width=True,
-        height=460,
+        use_container_width=True, height=460,
     )
 
     st.divider()
-
-    # Top/Bottom in war periods
     col_top, col_bot = st.columns(2)
     war_col = "ממוצע בתקופות מלחמה"
     sorted_war = df_stocks[war_col].dropna().sort_values(ascending=False)
