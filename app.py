@@ -93,7 +93,7 @@ PERIODS_ANALYSIS = {
 
 FUND_STRUCTURE = {
     "שם הקרן": "WAR ETF 3x (WARX)",
-    "דמי ניהול (TER)": "0.95% לשנה",
+    "דמי ניהול (TER)": "1.25% לשנה",
     "מינוף": "3x — daily rebalancing via swaps",
     "בורסה מוצעת": "NYSE Arca / TASE",
     "מספר מניות": "30 מניות ב-5 סקטורים",
@@ -351,6 +351,55 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
                            legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)"),
                            xaxis=dict(rangeselector=range_selector(), type="date"))
     st.plotly_chart(fig_exec, use_container_width=True)
+
+    st.divider()
+
+    # ── Fee comparison ──
+    col_fee, col_why = st.columns([2, 1])
+    with col_fee:
+        st.markdown("### 💸 השוואת דמי ניהול — WAR ETF vs מתחרים")
+        fee_data = {
+            "TQQQ\n3x Nasdaq":   0.86,
+            "UPRO\n3x S&P 500":  0.91,
+            "SOXL\n3x Chips":    0.99,
+            "LABU\n3x Biotech":  1.09,
+            "ITA\nDefense 1x":   0.40,
+            "XAR\nAerospace 1x": 0.35,
+            "WAR ETF 3x\n⭐ קסם": 1.25,
+        }
+        colors_fee = ["#888" if "WAR" not in k else "#c00000" for k in fee_data]
+        fig_fee = go.Figure(go.Bar(
+            x=list(fee_data.keys()),
+            y=list(fee_data.values()),
+            marker_color=colors_fee,
+            text=[f"{v:.2f}%" for v in fee_data.values()],
+            textposition="outside",
+        ))
+        fig_fee.add_hline(y=1.25, line_dash="dot", line_color="#c00000", line_width=1.5,
+                          annotation_text="WAR ETF 1.25%", annotation_position="right")
+        fig_fee.update_layout(
+            height=320, margin=dict(l=20, r=60, t=20, b=20),
+            yaxis=dict(title="דמי ניהול שנתיים (%)", ticksuffix="%", range=[0, 1.6]),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_fee, use_container_width=True)
+
+    with col_why:
+        st.markdown("### 🎯 למה 1.25% מוצדק?")
+        st.markdown("""
+**תמה ייחודית** — אפס מתחרים ישירים, pricing power מלא
+
+**עלות תפעולית גבוהה** — daily rebalancing ב-30 מניות + 5 סקטורים + swaps
+
+**Alpha מוכח** — ביצועי יתר על S&P בכל תקופות המלחמה שנבחנו
+
+**קהל יעד מחויב** — משקיע שמחפש war exposure לא יסרב ל-0.3% יותר
+
+**Revenue לקסם** — על $100M AUM:
+- 0.95% = **$950K** לשנה
+- 1.25% = **$1.25M** לשנה
+- **+$300K נוספים** בלי שינוי מהותי
+        """)
 
     st.caption("⚠️ לצרכי מחקר ולמידה בלבד — אין לראות בכך ייעוץ השקעות. ביצועי עבר אינם ערובה לעתיד.")
 
