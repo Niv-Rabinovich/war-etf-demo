@@ -341,7 +341,24 @@ with tab2:
 
     fig_bt.update_layout(
         height=500, hovermode="x unified",
-        xaxis_title="תאריך", yaxis_title="שווי תיק (בסיס 100)",
+        xaxis=dict(
+            title="תאריך",
+            rangeselector=dict(
+                buttons=[
+                    dict(count=1,  label="1M",  step="month", stepmode="backward"),
+                    dict(count=6,  label="6M",  step="month", stepmode="backward"),
+                    dict(count=1,  label="YTD", step="year",  stepmode="todate"),
+                    dict(count=1,  label="1Y",  step="year",  stepmode="backward"),
+                    dict(count=3,  label="3Y",  step="year",  stepmode="backward"),
+                    dict(step="all", label="ALL"),
+                ],
+                bgcolor="#2a2a2a", activecolor="#c00000",
+                bordercolor="#555", borderwidth=1,
+                font=dict(color="white", size=11),
+            ),
+            type="date",
+        ),
+        yaxis_title="שווי תיק (בסיס 100)",
         legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)"),
         margin=dict(l=20, r=20, t=20, b=30),
     )
@@ -427,39 +444,65 @@ with tab2:
 # TAB 3  —  INVESTMENT SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab3:
-    st.subheader(f"סימולציית השקעה — ${invest_amount:,.0f}")
-
-    etf_r = sec_ret.mean(axis=1)
-    spy_r = prices["SPY"].pct_change().dropna() if "SPY" in prices.columns else None
+    etf_r   = sec_ret.mean(axis=1)
+    spy_r   = prices["SPY"].pct_change().dropna() if "SPY" in prices.columns else None
 
     etf_1x_val  = (1 + etf_r).cumprod() * invest_amount
     etf_lev_val = (1 + etf_r * lev_factor).cumprod() * invest_amount
     spy_val     = (1 + spy_r).cumprod() * invest_amount if spy_r is not None else None
 
-    # Big metrics
     final_1x  = float(etf_1x_val.iloc[-1])
     final_lev = float(etf_lev_val.iloc[-1])
     final_spy = float(spy_val.iloc[-1]) if spy_val is not None else None
 
-    m1, m2, m3 = st.columns(3)
-    m1.metric(
-        f"War ETF {lev_factor}x — שווי סופי",
-        f"${final_lev:,.0f}",
-        f"{'+' if final_lev > invest_amount else ''}{final_lev - invest_amount:,.0f}$ ({(final_lev/invest_amount-1)*100:+.1f}%)",
-    )
-    m2.metric(
-        "War ETF 1x — שווי סופי",
-        f"${final_1x:,.0f}",
-        f"{'+' if final_1x > invest_amount else ''}{final_1x - invest_amount:,.0f}$ ({(final_1x/invest_amount-1)*100:+.1f}%)",
-    )
-    if final_spy:
-        m3.metric(
-            "S&P 500 — שווי סופי",
-            f"${final_spy:,.0f}",
-            f"{'+' if final_spy > invest_amount else ''}{final_spy - invest_amount:,.0f}$ ({(final_spy/invest_amount-1)*100:+.1f}%)",
-        )
+    profit_lev = final_lev - invest_amount
+    profit_1x  = final_1x  - invest_amount
+    profit_spy = (final_spy - invest_amount) if final_spy else None
 
-    # Chart in $ terms
+    # ── Hero cards ──
+    st.markdown(f"""
+    <div style="display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:180px; background:linear-gradient(135deg,#7b0000,#c00000);
+                    color:white; padding:20px 24px; border-radius:12px; text-align:center;">
+            <div style="font-size:13px; opacity:.8;">War ETF {lev_factor}x</div>
+            <div style="font-size:36px; font-weight:900; margin:6px 0;">${final_lev:,.0f}</div>
+            <div style="font-size:15px; opacity:.9;">
+                {'▲' if profit_lev > 0 else '▼'} ${abs(profit_lev):,.0f}
+                &nbsp;({(final_lev/invest_amount-1)*100:+.1f}%)
+            </div>
+        </div>
+        <div style="flex:1; min-width:180px; background:linear-gradient(135deg,#0d3359,#1f4e79);
+                    color:white; padding:20px 24px; border-radius:12px; text-align:center;">
+            <div style="font-size:13px; opacity:.8;">War ETF 1x</div>
+            <div style="font-size:36px; font-weight:900; margin:6px 0;">${final_1x:,.0f}</div>
+            <div style="font-size:15px; opacity:.9;">
+                {'▲' if profit_1x > 0 else '▼'} ${abs(profit_1x):,.0f}
+                &nbsp;({(final_1x/invest_amount-1)*100:+.1f}%)
+            </div>
+        </div>
+        <div style="flex:1; min-width:180px; background:linear-gradient(135deg,#2d2d2d,#444);
+                    color:white; padding:20px 24px; border-radius:12px; text-align:center;">
+            <div style="font-size:13px; opacity:.8;">S&P 500</div>
+            <div style="font-size:36px; font-weight:900; margin:6px 0;">${final_spy:,.0f}</div>
+            <div style="font-size:15px; opacity:.9;">
+                {'▲' if (profit_spy or 0) > 0 else '▼'} ${abs(profit_spy or 0):,.0f}
+                &nbsp;({(final_spy/invest_amount-1)*100:+.1f}%)
+            </div>
+        </div>
+        <div style="flex:1; min-width:180px; background:linear-gradient(135deg,#1a3a1a,#27ae60);
+                    color:white; padding:20px 24px; border-radius:12px; text-align:center;">
+            <div style="font-size:13px; opacity:.8;">יתרון {lev_factor}x על S&P</div>
+            <div style="font-size:36px; font-weight:900; margin:6px 0;">
+                x{final_lev/final_spy:.1f}
+            </div>
+            <div style="font-size:15px; opacity:.9;">
+                +${final_lev - final_spy:,.0f} יותר
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Chart ──
     fig_sim = go.Figure()
 
     for war_name, wp in WAR_PERIODS.items():
@@ -473,12 +516,10 @@ with tab3:
             annotation_font_size=11,
         )
 
-    # Starting line
     fig_sim.add_hline(
-        y=invest_amount, line_dash="dot",
-        line_color="#aaa", line_width=1,
-        annotation_text=f"השקעה ראשונית ${invest_amount:,.0f}",
-        annotation_position="right",
+        y=invest_amount, line_dash="dot", line_color="#999", line_width=1.2,
+        annotation_text=f"  השקעה ראשונית ${invest_amount:,.0f}",
+        annotation_position="right", annotation_font_size=10,
     )
 
     if spy_val is not None:
@@ -487,19 +528,16 @@ with tab3:
             name="S&P 500", line=dict(color="#888", width=1.8, dash="dash"),
         ))
 
-    # Benchmark ETFs
     for bname in bench_selected:
         bticker = BENCHMARK_ETFS[bname]["ticker"]
         if bticker in prices.columns:
-            b_r = prices[bticker].pct_change().dropna()
-            b_val = (1 + b_r).cumprod() * invest_amount
+            b_r2 = prices[bticker].pct_change().dropna()
+            b_val = (1 + b_r2).cumprod() * invest_amount
             fig_sim.add_trace(go.Scatter(
                 x=b_val.index, y=b_val.values,
                 name=bname.split("(")[1].rstrip(")"),
-                line=dict(
-                    color=BENCHMARK_ETFS[bname]["color"],
-                    width=2, dash=BENCHMARK_ETFS[bname]["dash"],
-                ),
+                line=dict(color=BENCHMARK_ETFS[bname]["color"], width=2,
+                          dash=BENCHMARK_ETFS[bname]["dash"]),
             ))
 
     if lev_factor > 1:
@@ -513,20 +551,35 @@ with tab3:
         x=etf_lev_val.index, y=etf_lev_val.values,
         name=f"War ETF {lev_factor}x ⭐",
         line=dict(color="#c00000", width=3.5),
-        fill="tozeroy", fillcolor="rgba(192,0,0,0.05)",
+        fill="tozeroy", fillcolor="rgba(192,0,0,0.06)",
     ))
 
     fig_sim.update_layout(
-        height=480, hovermode="x unified",
-        xaxis_title="תאריך",
-        yaxis_title="שווי תיק ($)",
-        yaxis_tickprefix="$", yaxis_tickformat=",.0f",
+        height=460, hovermode="x unified",
+        xaxis=dict(
+            title="תאריך",
+            rangeselector=dict(
+                buttons=[
+                    dict(count=1,  label="1M",  step="month", stepmode="backward"),
+                    dict(count=6,  label="6M",  step="month", stepmode="backward"),
+                    dict(count=1,  label="YTD", step="year",  stepmode="todate"),
+                    dict(count=1,  label="1Y",  step="year",  stepmode="backward"),
+                    dict(count=3,  label="3Y",  step="year",  stepmode="backward"),
+                    dict(step="all", label="ALL"),
+                ],
+                bgcolor="#2a2a2a", activecolor="#c00000",
+                bordercolor="#555", borderwidth=1,
+                font=dict(color="white", size=11),
+            ),
+            type="date",
+        ),
+        yaxis=dict(title="שווי תיק ($)", tickprefix="$", tickformat=",.0f"),
         legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)"),
-        margin=dict(l=20, r=20, t=20, b=30),
+        margin=dict(l=20, r=20, t=10, b=30),
     )
     st.plotly_chart(fig_sim, use_container_width=True)
 
-    # Summary table by war period
+    # ── War period breakdown ──
     st.divider()
     st.subheader("כמה היית מרוויח בכל תקופת מלחמה?")
 
@@ -535,13 +588,14 @@ with tab3:
         r_etf = period_return(etf_r, ps, pe)
         if r_etf is None:
             continue
-        r_lev = (1 + etf_r.loc[ps:pe] * lev_factor).prod() - 1
+        r_lev  = float((1 + etf_r.loc[ps:pe] * lev_factor).prod() - 1)
         r_spy2 = period_return(spy_r, ps, pe) if spy_r is not None else None
+        def fmt(r): return f"{'+'if r>0 else ''}${r*invest_amount:,.0f} ({r*100:+.1f}%)"
         sim_rows.append({
             "תקופה": pname,
-            f"War ETF {lev_factor}x — רווח/הפסד": f"{'+'  if r_lev > 0 else ''}${r_lev*invest_amount:,.0f}",
-            "War ETF 1x — רווח/הפסד": f"{'+'  if r_etf > 0 else ''}${r_etf*invest_amount:,.0f}",
-            "S&P 500 — רווח/הפסד": f"{'+'  if (r_spy2 or 0) > 0 else ''}${(r_spy2 or 0)*invest_amount:,.0f}" if r_spy2 else "—",
+            f"War ETF {lev_factor}x": fmt(r_lev),
+            "War ETF 1x": fmt(r_etf),
+            "S&P 500": fmt(r_spy2) if r_spy2 else "—",
         })
 
     if sim_rows:
@@ -551,8 +605,8 @@ with tab3:
             if not isinstance(val, str) or val == "—":
                 return ""
             try:
-                num = float(val.replace("$", "").replace(",", "").replace("+", ""))
-                return f"color: {'#27ae60' if num > 0 else '#c0392b'}; font-weight:bold"
+                sign = 1 if val.startswith("+") else -1
+                return f"color: {'#27ae60' if sign > 0 else '#c0392b'}; font-weight:bold"
             except Exception:
                 return ""
 
