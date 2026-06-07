@@ -128,14 +128,12 @@ def period_return(series: pd.Series, start: str, end: str):
     s = series.loc[start:end]
     return float((1 + s).prod() - 1) if len(s) > 5 else None
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Sidebar — stock selection only ───────────────────────────────────────────
 with st.sidebar:
     st.header("⚙️ הגדרות")
 
-    # ── Sector + stock selection ──
     st.subheader("סקטורים ומניות")
     stock_selection: dict[str, list[str]] = {}
-
     for sname, sinfo in SECTORS.items():
         col_check, col_label = st.columns([1, 7])
         sector_on = col_check.checkbox("", value=True, key=f"chk_{sname}", label_visibility="collapsed")
@@ -152,8 +150,6 @@ with st.sidebar:
                 stock_selection[sname] = chosen
 
     st.divider()
-
-    # ── Benchmark ETFs ──
     st.subheader("השוואה לתעודות קיימות")
     bench_selected = [
         name for name, info in BENCHMARK_ETFS.items()
@@ -161,15 +157,6 @@ with st.sidebar:
     ]
 
     st.divider()
-
-    # ── Date range ──
-    st.subheader("תקופת בק-טסטינג")
-    d_start = st.date_input("מתאריך", value=date(2021, 1, 1), min_value=date(2018, 1, 1))
-    d_end   = st.date_input("עד תאריך", value=date(2024, 12, 31))
-
-    st.divider()
-
-    # ── Leverage ──
     lev_factor = st.select_slider("מינוף", options=[1, 2, 3], value=3)
 
     st.divider()
@@ -181,15 +168,16 @@ if len(stock_selection) < 2:
     st.warning("⚠️ בחר לפחות 2 סקטורים עם מניות כדי לחשב קורלציה.")
     st.stop()
 
-# ── Load data ─────────────────────────────────────────────────────────────────
+# ── Load full data (fixed wide range) ────────────────────────────────────────
+D_START, D_END = "2018-01-01", "2024-12-31"
 all_tickers = list({t for stocks in stock_selection.values() for t in stocks})
 all_tickers += ["SPY"] + [BENCHMARK_ETFS[b]["ticker"] for b in bench_selected]
 
 with st.spinner("📡 טוען נתוני שוק..."):
-    prices = load_prices(all_tickers, str(d_start), str(d_end))
-    sec_ret = sector_returns(prices, stock_selection)
+    prices = load_prices(all_tickers, D_START, D_END)
+    sec_ret_full = sector_returns(prices, stock_selection)
 
-# ── Banner ────────────────────────────────────────────────────────────────────
+# ── Banner + global period selector ──────────────────────────────────────────
 st.markdown("""
 <div class="war-banner">
     <h2 style="margin:0">🛡️ WAR ETF 3x</h2>
@@ -197,6 +185,36 @@ st.markdown("""
     <small style="opacity:.7">הצעה לקסם תעודות סל | Demo 2025</small>
 </div>
 """, unsafe_allow_html=True)
+
+# Period selector — shown in page, above tabs
+GLOBAL_PERIODS = {
+    "📅 כל הזמן":                  ("2021-01-01", "2024-12-31"),
+    "🇺🇦 מלחמת אוקראינה":          ("2022-02-24", "2022-12-31"),
+    "⚔️ בין המלחמות":              ("2023-01-01", "2023-10-06"),
+    "🇮🇱 מלחמת עזה":               ("2023-10-07", "2024-06-30"),
+    "🔥 שתי המלחמות יחד":          ("2022-02-24", "2024-06-30"),
+    "📆 בחירה חופשית":             None,
+}
+
+sel_period = st.radio(
+    "בחר תקופה להצגה:",
+    list(GLOBAL_PERIODS.keys()),
+    horizontal=True,
+    index=0,
+    label_visibility="visible",
+)
+
+if GLOBAL_PERIODS[sel_period] is None:
+    fc1, fc2 = st.columns(2)
+    d_start = fc1.date_input("מתאריך", value=date(2021, 1, 1), min_value=date(2018, 1, 1))
+    d_end   = fc2.date_input("עד תאריך", value=date(2024, 12, 31))
+    g_start, g_end = str(d_start), str(d_end)
+else:
+    g_start, g_end = GLOBAL_PERIODS[sel_period]
+
+# Slice data to the selected period
+prices   = prices.loc[g_start:g_end]
+sec_ret  = sec_ret_full.loc[g_start:g_end]
 
 tab1, tab2, tab3, tab4 = st.tabs([
     "📊 סקטורים וקורלציה",
@@ -228,7 +246,7 @@ with tab1:
             <b style="color:{info['color']};font-size:15px">{info['he']}</b><br>
             <small style="color:#555">{', '.join(stocks_ok)}</small><br><br>
             <span style="font-size:18px;font-weight:700;color:{ret_color}">{ret_str}</span>
-            <span style="font-size:11px;color:#888"> מתחילת התקופה</span>
+            <span style="font-size:11px;color:#888"> {sel_period}</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -435,21 +453,15 @@ with tab2:
 with tab3:
     # ── Inputs ──
     st.markdown("### 💰 סימולציית השקעה — כמה היית מרוויח?")
-    col_inp, col_period, col_view = st.columns([1, 1, 1])
+    col_inp, col_view, col_spacer = st.columns([1, 1, 1])
     invest_amount = col_inp.number_input(
         "סכום השקעה ראשוני ($)",
         min_value=100, max_value=10_000_000,
         value=10_000, step=1_000, format="%d",
     )
-    period_options = {
-        "כל התקופה": (str(d_start), str(d_end)),
-        "מלחמת אוקראינה (פבר׳ 2022 – דצמ׳ 2022)": ("2022-02-24", "2022-12-31"),
-        "מלחמת עזה (אוק׳ 2023 – יוני 2024)":       ("2023-10-07", "2024-06-30"),
-        "שתי המלחמות יחד":                           ("2022-02-24", "2024-06-30"),
-    }
-    chosen_period = col_period.selectbox("תקופת חישוב", list(period_options.keys()))
-    sim_start, sim_end = period_options[chosen_period]
     chart_mode = col_view.radio("תצוגת גרף", ["$ שווי", "% תשואה"], horizontal=True)
+    sim_start, sim_end = g_start, g_end
+    st.caption(f"מציג תקופה: **{sel_period}** ({g_start} → {g_end})")
     st.divider()
 
     etf_r   = sec_ret.mean(axis=1)
