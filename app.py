@@ -52,16 +52,6 @@ st.markdown(f"""
     }}
     .sector-name {{ font-size: 15px; font-weight: 800; }}
     .sector-tk   {{ font-size: 12px; color: {MUTED}; }}
-    .cta {{
-        background: linear-gradient(135deg,#1c1016,#0c0f14);
-        border: 1px solid {ACCENT}; border-radius: 16px;
-        padding: 28px 32px; text-align: center; margin: 6px 0;
-    }}
-    .cta-title {{ font-size: 23px; font-weight: 900; color: #fff; }}
-    .cta-sub   {{ color: #b9c0cc; font-size: 14.5px; margin: 10px auto 16px; max-width: 760px; }}
-    .cta-pills {{ display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }}
-    .cta-pill  {{ background: rgba(178,30,53,0.14); border: 1px solid {ACCENT};
-                  color: #fff; padding: 9px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 600; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -704,20 +694,6 @@ with tab_biz:
     fc = st.columns(2)
     for i, (k, v) in enumerate(fs_items):
         fc[i % 2].markdown(f"**{k}:** {v}")
-
-    st.divider()
-    st.markdown(f"""
-    <div class="cta">
-        <div class="cta-title">🤝 הצעד הבא</div>
-        <div class="cta-sub">אנחנו מציעים לקסם להוביל את <b>תעודת הסל הממונפת הראשונה בעולם על כלכלת מלחמה</b> —
-        מוצר ייחודי, בלי מתחרים ישירים, עם pricing power מלא.</div>
-        <div class="cta-pills">
-            <span class="cta-pill">📈 פיילוט הנפקה · seed של $50M</span>
-            <span class="cta-pill">🏷️ מיתוג משותף · "קסם WAR ETF 3x"</span>
-            <span class="cta-pill">🏛️ השקה ב-NYSE Arca / TASE</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     st.caption("⚠️ לצרכי מחקר ולמידה בלבד — אין לראות בכך ייעוץ השקעות. ביצועי עבר אינם ערובה לעתיד.")
 
