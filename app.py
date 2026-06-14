@@ -37,35 +37,30 @@ st.markdown("""
 
 # ── Definitions ────────────────────────────────────────────────────────────────
 SECTORS = {
-    "Defense & Aerospace 🛡️": {
-        "stocks": ["LMT", "RTX", "NOC", "GD", "HII", "KTOS"],
-        "color": "#1f4e79", "he": "ביטחון ואוויר",
-        "desc": "לוקהיד מרטין, ריית'און, נורת'רופ גרומן, ג'נרל דיינמיקס, HII, Kratos",
+    "סקטור 1: תעשיות ביטחוניות 🛡️": {
+        "stocks": ["LMT", "RTX", "NOC", "GD", "HII", "LHX"],
+        "color": "#1f4e79", "he": "תעשיות ביטחוניות",
+        "desc": "חברות תעשייה כבדה בעלות חוזים ממשלתיים קשיחים הנהנות מזינוק מיידי ב\"צבר ההזמנות\" בעת הסלמה.",
     },
-    "Cyber & Intelligence 🔐": {
-        "stocks": ["CRWD", "PANW", "CACI", "LDOS", "BAH", "SAIC"],
-        "color": "#c00000", "he": "סייבר ומודיעין",
-        "desc": "CrowdStrike, Palo Alto Networks, CACI, Leidos, Booz Allen, SAIC",
+    "סקטור 2: סייבר הגנתי 🔐": {
+        "stocks": ["CRWD", "PANW", "ZS", "FTNT", "NET", "S"],
+        "color": "#2e9e5b", "he": "סייבר הגנתי",
+        "desc": "חברות טכנולוגיית אבטחה לענן. מלחמות מודרניות כוללות חזית דיגיטלית המאלצת הקפצת תקציבי הגנה.",
     },
-    "Energy ⚡": {
+    "סקטור 3: אנרגיה מסורתית ⛽": {
         "stocks": ["XOM", "CVX", "COP", "SLB", "HAL", "MPC"],
-        "color": "#7030a0", "he": "אנרגיה",
-        "desc": "אקסון מובייל, שברון, ConocoPhillips, שלומברגר, הליבורטון, Marathon",
+        "color": "#e07b00", "he": "אנרגיה מסורתית",
+        "desc": "חברות הפקה וזיקוק נפט וגז. סכסוכים משבשים אספקה ומזניקים את מחירי החביות ושולי הרווח.",
     },
-    "Raw Materials & Metals ⛏️": {
-        "stocks": ["MP", "NEM", "FCX", "AA", "CLF", "GOLD"],
-        "color": "#833c00", "he": "חומרי גלם ומתכות",
-        "desc": "MP Materials, ניומונט (זהב), פריפורט (נחושת), אלקואה, CLF, Barrick",
+    "סקטור 4: ספנות ותובלה 🚢": {
+        "stocks": ["ZIM", "FRO", "STNG", "GSL", "MATX", "KEX"],
+        "color": "#6a3d9a", "he": "ספנות ותובלה",
+        "desc": "חברות צי מיכליות. חסימת נתיבי שיט מאלצת הארכת מסלולים המקפיצה את מחירי השילוח העולמיים.",
     },
-    "Defense Tech 🚀": {
-        "stocks": ["PLTR", "AVAV", "OSIS", "DRS", "AXON", "BWXT"],
-        "color": "#375623", "he": "טכנולוגיה ביטחונית",
-        "desc": "פלאנטיר, AeroVironment (מל\"טים), OSI Systems, Leonardo DRS, Axon, BWXT",
-    },
-    "Iran War — חשיפה ישירה 🇮🇷": {
-        "stocks": ["RTX", "LMT", "XOM", "CVX", "CRWD", "PANW"],
-        "color": "#8b0070", "he": "חשיפה ישירה - איראן",
-        "desc": "הגנה אווירית (RTX/LMT), אנרגיה (XOM/CVX), סייבר-איראן (CRWD/PANW)",
+    "סקטור 5: תקשורת לוויינית ומודיעין 🛰️": {
+        "stocks": ["PLTR", "IRDM", "VSAT", "GSAT", "LDOS", "CACI"],
+        "color": "#1565c0", "he": "תקשורת לוויינית ומודיעין",
+        "desc": "חברות המפעילות לוויינים ומערכות AI בזמן אמת. ביקוש קריטי למידע וניווט במקומות בהם נפגעו תשתיות.",
     },
 }
 
@@ -73,6 +68,8 @@ BENCHMARK_ETFS = {
     "ITA (iShares Defense ETF)": {"ticker": "ITA", "color": "#2196F3", "dash": "dash"},
     "XAR (SPDR Aerospace ETF)":  {"ticker": "XAR", "color": "#FF9800", "dash": "dot"},
     "PPA (Invesco Defense ETF)": {"ticker": "PPA", "color": "#9C27B0", "dash": "dashdot"},
+    "הראל ת\"א בטחוניות 🇮🇱": {"ticker": "HRL_DEF", "color": "#2e7d32", "dash": "longdash",
+                              "custom": "harel_ta_defense.csv"},
 }
 
 WAR_PERIODS = {
@@ -93,9 +90,9 @@ PERIODS_ANALYSIS = {
 
 FUND_STRUCTURE = {
     "שם הקרן": "WAR ETF 3x (WARX)",
-    "דמי ניהול (TER)": "1.25% לשנה (קסם)",
+    "דמי ניהול (TER)": "2% לשנה (קסם)",
     "דמי נאמן": "0.03% לשנה",
-    "סה\"כ עלות למשקיע": "1.28% לשנה",
+    "סה\"כ עלות למשקיע": "2.03% לשנה",
     "מינוף": "3x — daily rebalancing via swaps",
     "בורסה מוצעת": "NYSE Arca / TASE",
     "מספר מניות": "30 מניות ב-5 סקטורים",
@@ -155,6 +152,20 @@ def load_prices(tickers, start, end):
         close = close.to_frame()
     return close.dropna(thresh=int(len(close) * 0.5), axis=1)
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_custom_series(csv_name):
+    """קורא קרן מקובץ CSV מקומי (snapshot מגלובס) ומחזיר סדרת מחירי סגירה לפי תאריך."""
+    import os
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), csv_name)
+    if not os.path.exists(path):
+        return None
+    df = pd.read_csv(path, parse_dates=["date"]).set_index("date")
+    return df["close"]
+
+def bench_label(name):
+    """תווית קצרה לגרף: החלק בסוגריים אם קיים, אחרת השם המלא."""
+    return name.split("(")[1].rstrip(")") if "(" in name else name
+
 def sector_returns(prices, stock_selection):
     out = {}
     for sname, stocks in stock_selection.items():
@@ -163,8 +174,21 @@ def sector_returns(prices, stock_selection):
             out[SECTORS[sname]["he"]] = prices[cols].pct_change().mean(axis=1)
     return pd.DataFrame(out).dropna()
 
+# עלויות המוצר הממונף — מנוכות מהתשואה כדי שהמספרים יהיו נטו (ולא ברוטו אופטימי)
+TER_ANNUAL   = 0.02    # דמי ניהול קסם (2%)
+FINANCE_RATE = 0.045   # עלות מימון המינוף ≈ ריבית חסרת-סיכון, על החלק המושאל
+TRADING_DAYS = 252
+
+def lev_net(rets, lev):
+    """תשואה יומית ממונפת נטו: מינוף×תשואת הסל פחות עלות יומית (TER + מימון על החלק הממונף).
+    ב-lev=1 מחזיר ברוטו — מתאים לקווי ייחוס (S&P / תעודות אמיתיות שכבר כוללות עלויות)."""
+    daily = rets * lev
+    if lev > 1:
+        daily = daily - (TER_ANNUAL + (lev - 1) * FINANCE_RATE) / TRADING_DAYS
+    return daily
+
 def lev_nav(rets, lev):
-    return (1 + rets * lev).cumprod() * 100
+    return (1 + lev_net(rets, lev)).cumprod() * 100
 
 def period_return(series, start, end):
     s = series.loc[start:end]
@@ -221,10 +245,19 @@ if len(stock_selection) < 2:
 
 # ── Load data ──────────────────────────────────────────────────────────────────
 all_tickers = list({t for s in stock_selection.values() for t in s})
-all_tickers += ["SPY"] + [BENCHMARK_ETFS[b]["ticker"] for b in bench_selected]
+all_tickers += ["SPY"] + [BENCHMARK_ETFS[b]["ticker"] for b in bench_selected
+                          if "custom" not in BENCHMARK_ETFS[b]]
 
 with st.spinner("📡 טוען נתוני שוק..."):
     prices_full = load_prices(all_tickers, "2018-01-01", str(date.today()))
+    # קרנות מ-CSV מקומי (כמו הראל ת"א בטחוניות) — מיישרים לימי המסחר עם ffill
+    # כך שהתשואה המצטברת נשמרת נכון (הקרן נסחרת א'-ה', המדד ב'-ו')
+    for b in bench_selected:
+        cfg = BENCHMARK_ETFS[b]
+        if "custom" in cfg:
+            s = load_custom_series(cfg["custom"])
+            if s is not None and not s.empty:
+                prices_full[cfg["ticker"]] = s.reindex(prices_full.index, method="ffill")
     sec_ret_full = sector_returns(prices_full, stock_selection)
 
 # ── Banner ─────────────────────────────────────────────────────────────────────
@@ -253,7 +286,7 @@ sec_ret = sec_ret_full.loc[g_start:g_end]
 # Common series used across tabs
 etf_r = sec_ret.mean(axis=1)
 spy_r = prices["SPY"].pct_change().dropna() if "SPY" in prices.columns else None
-etf_r_lev = etf_r * lev_factor
+etf_r_lev = lev_net(etf_r, lev_factor)   # נטו: בניכוי דמי ניהול + מימון מינוף
 
 tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🏆 Executive Summary",
@@ -305,6 +338,9 @@ with tab0:
         <div style="font-size:28px;font-weight:900">{cal_lev:.2f}</div>
         <div style="font-size:11px;opacity:.7">תשואה/סיכון</div></div>""", unsafe_allow_html=True)
 
+    st.caption(f"📌 כל המספרים הממונפים מוצגים **נטו** — בניכוי דמי ניהול {TER_ANNUAL*100:.0f}% "
+               f"ועלות מימון המינוף (~{FINANCE_RATE*100:.1f}% שנתי על החלק המושאל).")
+
     st.divider()
 
     # ── Thesis ──
@@ -329,6 +365,20 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
         st.markdown("### 🏗️ מבנה הקרן")
         for k, v in FUND_STRUCTURE.items():
             st.markdown(f"**{k}:** {v}")
+
+    with st.expander("📋 מתודולוגיה וגילוי נאות — חשוב לקרוא"):
+        st.markdown(f"""
+**כלל בחירת המניות (מוגדר מראש, לא ממוטב):** כל סקטור = 6 חברות מובילות בנזילות ובקפיטליזציה בתחומן,
+במשקל שווה (≈16.7% למניה, 20% לסקטור). אין אופטימיזציה היסטורית של המשקולות או של זהות המניות.
+
+**⚠️ הטיית הסתכלות-לאחור:** הרכב הסל נקבע היום, בדיעבד. ביצועי העבר בתקופות המלחמה הם **אילוסטרטיביים**
+וכוללים מרכיב של בחירה לאחר-מעשה — **אינם תחזית לעתיד**. מדד אמיתי יוגדר לפי כללים אובייקטיביים
+שייקבעו מראש וייבחנו גם out-of-sample.
+
+**עלויות:** התשואות הממונפות מוצגות **נטו** — בניכוי דמי ניהול {TER_ANNUAL*100:.0f}% לשנה ועלות מימון
+המינוף (~{FINANCE_RATE*100:.1f}% שנתי על החלק המושאל, ≈{(TER_ANNUAL+(lev_factor-1)*FINANCE_RATE)*100:.1f}%
+דראג שנתי כולל ב-{lev_factor}x). תעודות ההשוואה (ITA/XAR/PPA/הראל/S&P) משקפות את עלויותיהן בפועל דרך מחירן.
+        """)
 
     st.divider()
 
@@ -367,7 +417,7 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
             "LABU\n3x Biotech":  1.09,
             "ITA\nDefense 1x":   0.40,
             "XAR\nAerospace 1x": 0.35,
-            "WAR ETF 3x\n⭐ קסם": 1.25,
+            "WAR ETF 3x\n⭐ קסם": 2.0,
         }
         colors_fee = ["#888" if "WAR" not in k else "#c00000" for k in fee_data]
         fig_fee = go.Figure(go.Bar(
@@ -377,17 +427,17 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
             text=[f"{v:.2f}%" for v in fee_data.values()],
             textposition="outside",
         ))
-        fig_fee.add_hline(y=1.25, line_dash="dot", line_color="#c00000", line_width=1.5,
-                          annotation_text="WAR ETF 1.25%", annotation_position="right")
+        fig_fee.add_hline(y=2.0, line_dash="dot", line_color="#c00000", line_width=1.5,
+                          annotation_text="WAR ETF 2%", annotation_position="right")
         fig_fee.update_layout(
             height=320, margin=dict(l=20, r=60, t=20, b=20),
-            yaxis=dict(title="דמי ניהול שנתיים (%)", ticksuffix="%", range=[0, 1.6]),
+            yaxis=dict(title="דמי ניהול שנתיים (%)", ticksuffix="%", range=[0, 2.4]),
             showlegend=False,
         )
         st.plotly_chart(fig_fee, use_container_width=True)
 
     with col_why:
-        st.markdown("### 🎯 למה 1.25% מוצדק?")
+        st.markdown("### 🎯 למה 2% מוצדק?")
         st.markdown("""
 **תמה ייחודית** — אפס מתחרים ישירים, pricing power מלא
 
@@ -395,7 +445,7 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
 
 **Alpha מוכח** — ביצועי יתר על S&P בכל תקופות המלחמה שנבחנו
 
-**קהל יעד מחויב** — משקיע שמחפש war exposure לא יסרב ל-0.3% יותר
+**קהל יעד מחויב** — משקיע שמחפש war exposure לא יסרב לפרמיה על מוצר ייחודי
         """)
 
     st.divider()
@@ -403,7 +453,7 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
     # ── Revenue potential ──
     st.markdown("### 💼 פוטנציאל הכנסות — קסם תעודות סל")
 
-    MGMT_FEE   = 0.0125   # 1.25%
+    MGMT_FEE   = 0.02     # 2%
     TRUSTEE    = 0.0003   # 0.03%
     aum_levels = [50, 100, 250, 500, 1_000, 2_500]
 
@@ -415,7 +465,7 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
         total_rev   = mgmt_rev + trustee_rev
         rev_rows.append({
             "AUM ($M)":           f"${aum:,}M",
-            "הכנסת קסם (1.25%)": f"${mgmt_rev/1e6:.3f}M",
+            "הכנסת קסם (2%)": f"${mgmt_rev/1e6:.3f}M",
             "הכנסת נאמן (0.03%)":f"${trustee_rev/1000:.0f}K",
             "סה\"כ הכנסות":       f"${total_rev/1e6:.3f}M",
         })
@@ -430,7 +480,7 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
     trust_vals= [a * TRUSTEE / 1e6 for a in aum_vals]
     labels    = [f"${a}M" for a in aum_levels]
 
-    fig_rev.add_trace(go.Bar(name="קסם — דמי ניהול 1.25%", x=labels, y=mgmt_vals,
+    fig_rev.add_trace(go.Bar(name="קסם — דמי ניהול 2%", x=labels, y=mgmt_vals,
                              marker_color="#c00000",
                              text=[f"${v:.2f}M" for v in mgmt_vals], textposition="inside"))
     fig_rev.add_trace(go.Bar(name="נאמן — 0.03%", x=labels, y=trust_vals,
@@ -443,7 +493,7 @@ ITA/XAR/PPA הם 1x בלבד ולא כוללים סייבר, אנרגיה וחו
         margin=dict(l=20, r=20, t=10, b=20),
     )
     st.plotly_chart(fig_rev, use_container_width=True)
-    st.caption("💡 על AUM של $500M — קסם מרוויחה **$6.25M בשנה** מדמי ניהול בלבד. הנאמן מקבל **$150K** נוספים.")
+    st.caption("💡 על AUM של $500M — קסם מרוויחה **$10M בשנה** מדמי ניהול בלבד. הנאמן מקבל **$150K** נוספים.")
 
     st.caption("⚠️ לצרכי מחקר ולמידה בלבד — אין לראות בכך ייעוץ השקעות. ביצועי עבר אינם ערובה לעתיד.")
 
@@ -527,7 +577,7 @@ with tab2:
         if bt in prices.columns:
             b_r = prices[bt].pct_change().dropna()
             fig_bt.add_trace(go.Scatter(x=lev_nav(b_r, 1).index, y=lev_nav(b_r, 1).values,
-                                        name=bname.split("(")[1].rstrip(")"),
+                                        name=bench_label(bname),
                                         line=dict(color=BENCHMARK_ETFS[bname]["color"], width=2,
                                                   dash=BENCHMARK_ETFS[bname]["dash"])))
     if lev_factor > 1:
@@ -548,7 +598,7 @@ with tab2:
     for pname, (ps, pe) in PERIODS_ANALYSIS.items():
         r_etf = period_return(etf_r, ps, pe)
         if r_etf is None: continue
-        r_lev = period_return(etf_r * lev_factor, ps, pe) if lev_factor > 1 else None
+        r_lev = period_return(lev_net(etf_r, lev_factor), ps, pe) if lev_factor > 1 else None
         r_spy = period_return(spy_r, ps, pe) if spy_r is not None else None
         row = {"תקופה": pname,
                f"War ETF {lev_factor}x": f"{r_lev*100:+.1f}%" if r_lev else "—",
@@ -558,7 +608,7 @@ with tab2:
             bt = BENCHMARK_ETFS[bname]["ticker"]
             if bt in prices.columns:
                 r_b = period_return(prices[bt].pct_change().dropna(), ps, pe)
-                row[bname.split("(")[1].rstrip(")")] = f"{r_b*100:+.1f}%" if r_b else "—"
+                row[bench_label(bname)] = f"{r_b*100:+.1f}%" if r_b else "—"
         rows.append(row)
     if rows:
         df_table = pd.DataFrame(rows).set_index("תקופה")
@@ -607,7 +657,7 @@ with tab3:
     spy_rp  = spy_r.loc[sim_start:sim_end] if spy_r is not None else None
 
     def pf(r_slice): return float((1 + r_slice).prod()) * invest_amount if len(r_slice) > 0 else invest_amount
-    final_lev = pf(etf_rp * lev_factor); final_1x = pf(etf_rp)
+    final_lev = pf(lev_net(etf_rp, lev_factor)); final_1x = pf(etf_rp)
     final_spy = pf(spy_rp) if spy_rp is not None else None
 
     st.markdown(f"""
@@ -654,7 +704,7 @@ with tab3:
         s = make_s(etf_rp)
         fig_sim.add_trace(go.Scatter(x=s.index, y=s.values, name="War ETF 1x",
                                      line=dict(color="#1f4e79", width=2, dash="dot")))
-    sl = make_s(etf_rp, lev_factor)
+    sl = make_s(lev_net(etf_rp, lev_factor))
     fig_sim.add_trace(go.Scatter(x=sl.index, y=sl.values, name=f"War ETF {lev_factor}x ⭐",
                                  line=dict(color="#c00000", width=3.5),
                                  fill="tozeroy", fillcolor="rgba(192,0,0,0.06)"))
@@ -676,7 +726,7 @@ with tab3:
     for pname, (ps, pe) in PERIODS_ANALYSIS.items():
         r_etf = period_return(etf_r, ps, pe)
         if r_etf is None: continue
-        r_lev = float((1 + etf_r.loc[ps:pe] * lev_factor).prod() - 1)
+        r_lev = float((1 + lev_net(etf_r.loc[ps:pe], lev_factor)).prod() - 1)
         r_spy2 = period_return(spy_r, ps, pe) if spy_r is not None else None
         def fmt(r): return f"{'+'if r>0 else ''}${r*invest_amount:,.0f} ({r*100:+.1f}%)"
         sim_rows.append({"תקופה": pname, f"War ETF {lev_factor}x": fmt(r_lev),
@@ -695,12 +745,12 @@ with tab3:
 with tab4:
     st.subheader("⚠️ ניתוח סיכון — War ETF 3x")
 
-    series_map = {f"War ETF {lev_factor}x": etf_r * lev_factor, "War ETF 1x": etf_r}
+    series_map = {f"War ETF {lev_factor}x": lev_net(etf_r, lev_factor), "War ETF 1x": etf_r}
     if spy_r is not None: series_map["S&P 500"] = spy_r
     for bname in bench_selected:
         bt = BENCHMARK_ETFS[bname]["ticker"]
         if bt in prices.columns:
-            series_map[bname.split("(")[1].rstrip(")")] = prices[bt].pct_change().dropna()
+            series_map[bench_label(bname)] = prices[bt].pct_change().dropna()
 
     # ── Risk metrics table ──
     risk_rows = []
@@ -749,7 +799,7 @@ with tab4:
                              legend=dict(x=0.01, y=0.01),
                              margin=dict(l=20, r=20, t=20, b=20))
         st.plotly_chart(fig_dd, use_container_width=True)
-        mdd_val = max_dd(etf_r * lev_factor)
+        mdd_val = max_dd(lev_net(etf_r, lev_factor))
         st.caption(f"Max Drawdown של War ETF {lev_factor}x: **{mdd_val:.1f}%** — הנקודה הכואבת ביותר למשקיע.")
 
     # ── Annualized rolling volatility ──
@@ -780,8 +830,10 @@ with tab4:
     rr_data = [{"נכס": n, "תשואה שנתית (%)": ann_ret(r), "תנודתיות (%)": ann_vol(r), "Sharpe": sharpe(r)}
                for n, r in series_map.items()]
     df_rr = pd.DataFrame(rr_data)
+    # גודל הנקודה חייב להיות חיובי — Sharpe שלילי נגזר לרצפה קטנה (הצבע עדיין אדום לשלילי)
+    df_rr["גודל"] = df_rr["Sharpe"].clip(lower=0.1)
     fig_rr = px.scatter(df_rr, x="תנודתיות (%)", y="תשואה שנתית (%)", text="נכס",
-                        size="Sharpe", color="Sharpe",
+                        size="גודל", color="Sharpe", hover_data={"גודל": False},
                         color_continuous_scale="RdYlGn", size_max=40)
     fig_rr.update_traces(textposition="top center")
     fig_rr.add_hline(y=0, line_dash="dot", line_color="#aaa")
