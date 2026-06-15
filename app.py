@@ -545,6 +545,8 @@ with tab_perf:
         fig_dd.update_layout(height=330, hovermode="x unified", yaxis=dict(title="Drawdown (%)", ticksuffix="%"),
                              xaxis=dict(rangeselector=range_selector(), type="date"), legend=dict(x=0.01, y=0.01))
         st.plotly_chart(style_fig(fig_dd), use_container_width=True)
+        st.caption("📉 **Drawdown** = כמה אחוז ירדת מהשיא. הנקודה הכי עמוקה היא ההפסד הגדול ביותר "
+                   "שהיית חווה — וב-×3 היא חדה במיוחד.")
 
     with col_vol:
         st.markdown("#### 📊 תנודתיות רולינג (30 יום)")
@@ -559,6 +561,8 @@ with tab_perf:
         fig_vol.update_layout(height=330, hovermode="x unified", yaxis=dict(title="תנודתיות שנתית (%)", ticksuffix="%"),
                               xaxis=dict(rangeselector=range_selector(), type="date"), legend=dict(x=0.01, y=0.99))
         st.plotly_chart(style_fig(fig_vol), use_container_width=True)
+        st.caption("📊 **תנודתיות** = עוצמת התנודות במחיר. קו גבוה יותר = השקעה פראית ומסוכנת יותר. "
+                   "שים לב שה-×3 (אדום) תנודתי בהרבה מה-S&P.")
 
     st.markdown("#### 🎯 Risk / Return — כל הנכסים")
     rr = pd.DataFrame([{"נכס": n, "תנודתיות (%)": ann_vol(r), "תשואה שנתית (%)": ann_ret(r),
@@ -571,7 +575,8 @@ with tab_perf:
     fig_rr.add_hline(y=0, line_dash="dot", line_color="#aaa")
     fig_rr.update_layout(height=380, coloraxis_colorbar_title="Sharpe")
     st.plotly_chart(style_fig(fig_rr), use_container_width=True)
-    st.caption("גודל הנקודה = Sharpe. נכס טוב: גבוה ושמאלי (תשואה גבוהה, תנודתיות נמוכה).")
+    st.caption("🎯 כל בועה = נכס: גובה = תשואה, ימין = סיכון. הכי טוב **שמאל-למעלה** (הרבה תשואה, מעט סיכון). "
+               "צבע/גודל = **Sharpe** — תשואה ביחס לסיכון (ירוק = משתלם).")
 
     # ── קורלציה (משני — באקורדיון) ──
     with st.expander("🔗 קורלציה וגיוון בין הסקטורים"):
