@@ -527,6 +527,9 @@ with tab_perf:
         "Sharpe": f"{sharpe(r):.2f}", "Max DD": f"{max_dd(r):.1f}%", "Calmar": f"{calmar(r):.2f}",
     } for name, r in series_map.items()]
     st.dataframe(pd.DataFrame(risk_rows).set_index("נכס"), use_container_width=True)
+    st.caption("📋 **מקרא:** תשואה שנתית = רווח ממוצע בשנה · תנודתיות = רמת הסיכון · "
+               "**Sharpe** = תשואה ביחס לסיכון (מעל 1 = טוב) · **Max DD** = הירידה הכי עמוקה מהשיא · "
+               "**Calmar** = תשואה ביחס לירידה המקסימלית (גבוה = טוב).")
 
     colors_line = {"War ETF 1x": "#5b7fb0", "S&P 500": "#888", f"War ETF {lev_factor}x": ACCENT}
 
